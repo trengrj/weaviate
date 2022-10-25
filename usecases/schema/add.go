@@ -23,6 +23,7 @@ import (
 	"github.com/semi-technologies/weaviate/entities/backup"
 	"github.com/semi-technologies/weaviate/entities/models"
 	"github.com/semi-technologies/weaviate/entities/schema"
+	"github.com/semi-technologies/weaviate/entities/vectorindex/searchium"
 	"github.com/semi-technologies/weaviate/usecases/config"
 	"github.com/semi-technologies/weaviate/usecases/monitoring"
 	"github.com/semi-technologies/weaviate/usecases/sharding"
@@ -293,18 +294,26 @@ func (m *Manager) validateProperty(
 func (m *Manager) parseVectorIndexConfig(ctx context.Context,
 	class *models.Class,
 ) error {
-	if class.VectorIndexType != "hnsw" {
+	switch class.VectorIndexType {
+	case "hnsw":
+		parsed, err := m.hnswConfigParser(class.VectorIndexConfig)
+		if err != nil {
+			return errors.Wrap(err, "parse vector index config")
+		}
+
+		class.VectorIndexConfig = parsed
+
+	case "searchium":
+		fmt.Printf("Detected searchium")
+		class.VectorIndexType = "searchium"
+
+		class.VectorIndexConfig = searchium.NewDefaultUserConfig()
+
+	default:
 		return errors.Errorf(
 			"parse vector index config: unsupported vector index type: %q",
 			class.VectorIndexType)
 	}
-
-	parsed, err := m.hnswConfigParser(class.VectorIndexConfig)
-	if err != nil {
-		return errors.Wrap(err, "parse vector index config")
-	}
-
-	class.VectorIndexConfig = parsed
 
 	return nil
 }

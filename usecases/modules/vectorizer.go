@@ -92,6 +92,11 @@ func (m *Provider) UpdateVector(ctx context.Context, object *models.Object,
 		return err
 	}
 
+	// Early termination for searchium
+	if vectorizerName == config.VectorizerModuleNone {
+		return nil
+	}
+
 	hnswConfig, ok := idxCfg.(hnsw.UserConfig)
 	if !ok {
 		return fmt.Errorf(errorVectorIndexType, idxCfg)
